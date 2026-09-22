@@ -19,15 +19,8 @@ function ProjectCard({ project, onOpen }: { project: TodoProject; onOpen: () => 
   const progress = project.taskCount ? Math.round((project.completedTaskCount / project.taskCount) * 100) : 0;
   return (
     <button type="button" onClick={onOpen} className="group rounded-xl border bg-card p-4 text-left transition hover:border-primary/30 hover:shadow-sm">
-      <span className="flex items-center gap-3">
-        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-white" style={{ backgroundColor: project.color ?? "#6366f1" }}>
-          <FolderKanban className="h-5 w-5" />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-semibold">{project.title}</span>
-          <span className="mt-1 block text-xs text-muted-foreground">{project.completedTaskCount}/{project.taskCount} tâches</span>
-        </span>
-      </span>
+      <span className="block truncate text-lg font-bold tracking-tight">{project.title}</span>
+      <span className="mt-1 block text-xs text-muted-foreground">{project.completedTaskCount}/{project.taskCount} tâches</span>
       <Progress value={progress} className="mt-4 h-1.5" />
     </button>
   );

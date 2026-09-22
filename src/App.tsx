@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useClerk, useUser } from "@clerk/clerk-react";
 import { AuthLoading, Authenticated, Unauthenticated, useAction, useMutation, useQuery } from "convex/react";
 import { useTheme } from "next-themes";
@@ -58,6 +58,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -74,7 +75,6 @@ import {
   type TodoTask,
 } from "@/lib/todo-types";
 
-type ProjectFilter = "all" | ProjectStatus;
 type Location = "home" | "my_tasks" | "projects" | "project";
 type ProjectTab = "overview" | "list" | "board" | "notes";
 
@@ -108,7 +108,6 @@ function Workspace() {
   const workspace = useQuery(api.mestodo.getWorkspace, canRead ? {} : "skip");
   const [location, setLocation] = useState<Location>("home");
   const [projectTab, setProjectTab] = useState<ProjectTab>("list");
-  const [filter, setFilter] = useState<ProjectFilter>("active");
   const [selectedProjectId, setSelectedProjectId] = useState<ProjectId | null>(null);
   const selectedProjectExists = Boolean(selectedProjectId && workspace?.projects.some((project) => project._id === selectedProjectId));
   const effectiveProjectId = location === "project"
@@ -149,7 +148,6 @@ function Workspace() {
 
   const projects = workspace?.projects ?? [];
   const allTasks = workspace?.tasks ?? [];
-  const sidebarProjects = filter === "all" ? projects : projects.filter((project) => project.status === filter);
   const project = data?.project;
   const selectedTask = data?.tasks.find((task) => task._id === selectedTaskId);
 
@@ -195,15 +193,16 @@ function Workspace() {
 
   const createProject = () => { setEditingProject(undefined); setProjectDialogOpen(true); };
   const sidebarProps = {
-    projects: sidebarProjects,
+    projects,
+    tasks: allTasks.filter((task) => !task.parentTaskId),
     selectedId: effectiveProjectId,
+    selectedTaskId,
     location,
-    filter,
-    onFilterChange: setFilter,
     onHome: () => { setLocation("home"); setSelectedTaskId(null); },
     onMyTasks: () => { setLocation("my_tasks"); setSelectedTaskId(null); },
     onProjects: () => { setLocation("projects"); setSelectedTaskId(null); },
     onSelect: openProject,
+    onSelectTask: openWorkspaceTask,
     canCreate,
     onCreateProject: createProject,
     onCreateTask: () => setTaskDialogOpen(true),
@@ -253,7 +252,7 @@ function ProjectHeader({ project, tab, onTabChange, canUpdate, canDelete, onEdit
   return (
     <div className="border-b bg-card px-4 pt-5 md:px-6">
       <div className="flex items-start justify-between gap-4">
-        <div className="flex min-w-0 items-center gap-3"><span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-white shadow-sm" style={{ backgroundColor: project.color ?? "#6366f1" }}><FolderKanban className="h-5 w-5" /></span><div className="min-w-0"><h1 className="truncate text-xl font-semibold">{project.title}</h1><p className="mt-0.5 text-xs text-muted-foreground">{project.taskCount} tâche{project.taskCount === 1 ? "" : "s"}</p></div></div>
+        <div className="min-w-0"><h1 className="truncate text-3xl font-bold tracking-tight">{project.title}</h1><p className="mt-1 text-sm text-muted-foreground">{project.taskCount} tâche{project.taskCount === 1 ? "" : "s"}</p></div>
         {canUpdate || canDelete ? <DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" aria-label="Actions du projet"><MoreHorizontal className="h-5 w-5" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-52"><DropdownMenuLabel>Projet</DropdownMenuLabel>{canUpdate ? <><DropdownMenuItem onSelect={onEdit}><Pencil className="mr-2 h-4 w-4" />Modifier</DropdownMenuItem><DropdownMenuSeparator />{(["active", "completed", "archived"] as ProjectStatus[]).map((status) => <DropdownMenuItem key={status} onSelect={() => onStatusChange(status)} disabled={status === project.status}>{status === "active" ? <CircleDashed className="mr-2 h-4 w-4" /> : status === "completed" ? <CheckCircle2 className="mr-2 h-4 w-4" /> : <Archive className="mr-2 h-4 w-4" />}{PROJECT_STATUS_LABELS[status]}</DropdownMenuItem>)}</> : null}{canDelete ? <><DropdownMenuSeparator /><DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={onDelete}><Trash2 className="mr-2 h-4 w-4" />Supprimer</DropdownMenuItem></> : null}</DropdownMenuContent></DropdownMenu> : null}
       </div>
       <nav className="mt-5 flex gap-1 overflow-x-auto" aria-label="Vues du projet">{tabs.map(({ value, label, icon: Icon }) => <button key={value} type="button" onClick={() => onTabChange(value)} className={cn("relative flex shrink-0 items-center gap-2 px-3 py-3 text-sm font-medium text-muted-foreground transition hover:text-foreground", tab === value && "text-foreground after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:bg-primary")}><Icon className="h-4 w-4" />{label}</button>)}</nav>
@@ -261,22 +260,35 @@ function ProjectHeader({ project, tab, onTabChange, canUpdate, canDelete, onEdit
   );
 }
 
-function ProjectSidebar({ projects, selectedId, location, filter, onFilterChange, onHome, onMyTasks, onProjects, onSelect, canCreate, onCreateProject, onCreateTask }: { projects: TodoProject[]; selectedId: ProjectId | null; location: Location; filter: ProjectFilter; onFilterChange: (filter: ProjectFilter) => void; onHome: () => void; onMyTasks: () => void; onProjects: () => void; onSelect: (id: ProjectId) => void; canCreate: boolean; onCreateProject: () => void; onCreateTask: () => void }) {
+function ProjectSidebar({ projects, tasks, selectedId, selectedTaskId, location, onHome, onMyTasks, onProjects, onSelect, onSelectTask, canCreate, onCreateProject, onCreateTask }: { projects: TodoProject[]; tasks: TodoTask[]; selectedId: ProjectId | null; selectedTaskId: TaskId | null; location: Location; onHome: () => void; onMyTasks: () => void; onProjects: () => void; onSelect: (id: ProjectId) => void; onSelectTask: (id: TaskId) => void; canCreate: boolean; onCreateProject: () => void; onCreateTask: () => void }) {
   const { user } = useUser();
   const { signOut } = useClerk();
   const userName = user?.firstName ?? user?.fullName ?? user?.primaryEmailAddress?.emailAddress ?? "Mon compte";
+  const [projectLimit, setProjectLimit] = useState(10);
+  const [taskLimit, setTaskLimit] = useState(10);
+  const projectById = useMemo(() => new Map(projects.map((project) => [project._id, project])), [projects]);
   return (
     <div className="flex h-full flex-col bg-card">
       <div className="flex h-20 items-center border-b px-5"><button type="button" onClick={onHome} className="text-xl font-black tracking-[-0.04em] text-foreground">Mes<span className="text-primary">Todo</span></button></div>
       <div className="space-y-1 p-3">
         {canCreate ? <CreateMenu onCreateTask={onCreateTask} onCreateProject={onCreateProject} /> : null}
         <SidebarLink active={location === "home"} icon={Home} label="Accueil" onClick={onHome} />
-        <SidebarLink active={location === "my_tasks"} icon={CheckCircle2} label="Mes tâches" onClick={onMyTasks} />
-        <SidebarLink active={location === "projects"} icon={FolderKanban} label="Projets" onClick={onProjects} />
       </div>
       <Separator />
-      <div className="flex items-center justify-between px-4 pb-2 pt-4"><button type="button" onClick={onProjects} className="text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground">Favoris</button><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Filtrer les projets"><ChevronDown className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="start" className="w-52"><DropdownMenuItem onSelect={() => onFilterChange("all")}>Tous les projets</DropdownMenuItem>{(["active", "completed", "archived"] as ProjectStatus[]).map((status) => <DropdownMenuItem key={status} onSelect={() => onFilterChange(status)}>{PROJECT_STATUS_LABELS[status]}</DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu></div>
-      <ScrollArea className="min-h-0 flex-1"><div className="grid gap-0.5 px-2 pb-3">{projects.length ? projects.map((project) => <button key={project._id} type="button" onClick={() => onSelect(project._id)} className={cn("flex items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm transition hover:bg-muted", location === "project" && selectedId === project._id && "bg-muted font-medium text-foreground")}><span className="h-2.5 w-2.5 shrink-0 rounded" style={{ backgroundColor: project.color ?? "#6366f1" }} /><span className="min-w-0 flex-1 truncate">{project.title}</span><span className="text-[10px] tabular-nums text-muted-foreground">{project.completedTaskCount}/{project.taskCount}</span></button>) : <p className="px-3 py-5 text-xs text-muted-foreground">Aucun projet {filter !== "all" ? PROJECT_STATUS_LABELS[filter].toLowerCase() : ""}</p>}</div></ScrollArea>
+      <ScrollArea className="min-h-0 flex-1">
+        <div className="space-y-2 px-2 py-3">
+          <SidebarCollection label="Projets" count={projects.length} active={location === "projects"} onOpenPage={onProjects}>
+            {projects.slice(0, projectLimit).map((project) => <button key={project._id} type="button" onClick={() => onSelect(project._id)} className={cn("flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground", location === "project" && selectedId === project._id && "bg-muted font-semibold text-foreground")}><span className="min-w-0 flex-1 truncate">{project.title}</span><span className="text-[10px] tabular-nums text-muted-foreground">{project.completedTaskCount}/{project.taskCount}</span></button>)}
+            {projects.length === 0 ? <p className="px-3 py-3 text-xs text-muted-foreground">Aucun projet</p> : null}
+            {projectLimit < projects.length ? <LoadMoreButton onClick={() => setProjectLimit((limit) => limit + 10)} remaining={projects.length - projectLimit} /> : null}
+          </SidebarCollection>
+          <SidebarCollection label="Tâches" count={tasks.length} active={location === "my_tasks"} onOpenPage={onMyTasks}>
+            {tasks.slice(0, taskLimit).map((task) => <button key={task._id} type="button" onClick={() => onSelectTask(task._id)} className={cn("block w-full rounded-lg px-3 py-2 text-left transition hover:bg-muted", selectedTaskId === task._id && "bg-muted")}><span className={cn("block truncate text-sm font-medium", task.status === "done" && "text-muted-foreground line-through")}>{task.title}</span><span className="mt-0.5 block truncate text-[10px] text-muted-foreground">{projectById.get(task.projectId)?.title ?? "Projet"}</span></button>)}
+            {tasks.length === 0 ? <p className="px-3 py-3 text-xs text-muted-foreground">Aucune tâche</p> : null}
+            {taskLimit < tasks.length ? <LoadMoreButton onClick={() => setTaskLimit((limit) => limit + 10)} remaining={tasks.length - taskLimit} /> : null}
+          </SidebarCollection>
+        </div>
+      </ScrollArea>
       <div className="space-y-2 border-t p-3">
         <ThemeToggle expanded />
         <div className="flex min-w-0 items-center gap-3 rounded-xl bg-muted px-3 py-2">
@@ -287,6 +299,22 @@ function ProjectSidebar({ projects, selectedId, location, filter, onFilterChange
       </div>
     </div>
   );
+}
+
+function SidebarCollection({ label, count, active, onOpenPage, children }: { label: string; count: number; active: boolean; onOpenPage: () => void; children: ReactNode }) {
+  return (
+    <Collapsible defaultOpen className="group/collapsible">
+      <div className="flex items-center gap-1 px-2 py-1">
+        <button type="button" onClick={onOpenPage} className={cn("min-w-0 flex-1 rounded-md px-1 py-1 text-left text-xs font-bold uppercase tracking-wide text-muted-foreground hover:text-foreground", active && "text-primary")}>{label}<span className="ml-2 font-medium tabular-nums opacity-60">{count}</span></button>
+        <CollapsibleTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7" aria-label={`Replier ${label}`}><ChevronDown className="h-4 w-4 transition group-data-[state=closed]/collapsible:-rotate-90" /></Button></CollapsibleTrigger>
+      </div>
+      <CollapsibleContent className="grid gap-0.5 pb-2">{children}</CollapsibleContent>
+    </Collapsible>
+  );
+}
+
+function LoadMoreButton({ onClick, remaining }: { onClick: () => void; remaining: number }) {
+  return <button type="button" onClick={onClick} className="w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-primary hover:bg-primary/5">Voir {Math.min(10, remaining)} de plus</button>;
 }
 
 function CreateMenu({ onCreateTask, onCreateProject, compact = false }: { onCreateTask: () => void; onCreateProject: () => void; compact?: boolean }) {

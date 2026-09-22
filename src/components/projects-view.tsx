@@ -92,10 +92,8 @@ function ProjectTile({ project, onOpen }: { project: TodoProject; onOpen: () => 
   const overdue = Boolean(project.dueAt && project.status === "active" && isBefore(project.dueAt, startOfDay(new Date())));
   return (
     <button type="button" onClick={onOpen} className="group rounded-2xl border bg-card p-5 text-left shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md">
-      <span className="flex items-start gap-3">
-        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-white shadow-sm" style={{ backgroundColor: project.color ?? "#6366f1" }}><FolderKanban className="h-5 w-5" /></span>
-        <span className="min-w-0 flex-1"><span className="block truncate font-semibold group-hover:text-primary">{project.title}</span><Badge variant="secondary" className="mt-1.5 text-[10px]">{PROJECT_STATUS_LABELS[project.status]}</Badge></span>
-      </span>
+      <span className="block truncate text-xl font-bold tracking-tight group-hover:text-primary">{project.title}</span>
+      <Badge variant="secondary" className="mt-2 text-[10px]">{PROJECT_STATUS_LABELS[project.status]}</Badge>
       <span className="mt-4 block min-h-10 line-clamp-2 text-sm leading-5 text-muted-foreground">{project.description || "Aucune description pour ce projet."}</span>
       <span className="mt-5 flex items-center justify-between text-xs"><span className="font-medium">{project.completedTaskCount}/{project.taskCount} tâches</span><span className="tabular-nums text-muted-foreground">{progress}%</span></span>
       <Progress value={progress} className="mt-2 h-1.5" />
