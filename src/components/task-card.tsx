@@ -1,4 +1,4 @@
-import { CalendarDays, MessageSquareText } from "lucide-react";
+import { CalendarDays, ListChecks, MessageSquareText } from "lucide-react";
 import { fr } from "date-fns/locale";
 import { format, isBefore, startOfDay } from "date-fns";
 import { AssigneeAvatars } from "@/components/assignee-picker";
@@ -17,12 +17,14 @@ import type { TaskStatus, TodoTask } from "@/lib/todo-types";
 export function TaskCard({
   task,
   noteCount,
+  subtaskCount,
   canUpdate,
   onOpen,
   onStatusChange,
 }: {
   task: TodoTask;
   noteCount: number;
+  subtaskCount: number;
   canUpdate: boolean;
   onOpen: () => void;
   onStatusChange: (status: TaskStatus) => void;
@@ -57,6 +59,11 @@ export function TaskCard({
         {noteCount > 0 ? (
           <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
             <MessageSquareText className="h-3.5 w-3.5" /> {noteCount}
+          </span>
+        ) : null}
+        {subtaskCount > 0 ? (
+          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+            <ListChecks className="h-3.5 w-3.5" /> {subtaskCount}
           </span>
         ) : null}
         <div className="ml-auto flex items-center gap-2">
