@@ -4,7 +4,7 @@ import { AlertCircle, CheckCircle2, ChevronLeft, Circle, ListChecks, Loader2, Pl
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { api } from "../../convex/_generated/api";
-import { AssigneePicker } from "@/components/assignee-picker";
+import { RaciAssignments } from "@/components/assignee-picker";
 import { PRIORITY_LABELS, TASK_STATUS_LABELS } from "@/components/todo-badges";
 import {
   AlertDialog,
@@ -176,7 +176,7 @@ export function TaskSheet({
               {parent ? <button type="button" onClick={() => onOpenTask(parent._id)} className="mb-2 inline-flex w-fit items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"><ChevronLeft className="h-3.5 w-3.5" />{parent.title}</button> : null}
               <div className="flex items-center gap-3">
                 <Button type="button" variant={task.status === "done" ? "default" : "outline"} size="icon" className="h-9 w-9 shrink-0 rounded-full" disabled={!canUpdate} onClick={() => onToggleTask(task)} aria-label={task.status === "done" ? "Rouvrir la tâche" : "Terminer la tâche"}>{task.status === "done" ? <CheckCircle2 className="h-5 w-5" /> : <Circle className="h-5 w-5" />}</Button>
-                <div><SheetTitle>{task.status === "done" ? "Tâche terminée" : "Détail de la tâche"}</SheetTitle><SheetDescription>Projet, copains et activité</SheetDescription></div>
+                <div><SheetTitle>{task.status === "done" ? "Tâche terminée" : "Détail de la tâche"}</SheetTitle><SheetDescription>Projet, rôles et activité</SheetDescription></div>
               </div>
             </SheetHeader>
             <div className="mt-6 grid gap-5">
@@ -219,8 +219,8 @@ export function TaskSheet({
                 <DatePicker id="sheet-task-date" value={dueAt} onChange={setDueAt} disabled={!canUpdate} />
               </div>
               <div className="grid gap-2">
-                <Label>Copains</Label>
-                <AssigneePicker directory={directory} value={assignees} onChange={setAssignees} disabled={!canUpdate} />
+                <Label>Participants et rôles</Label>
+                <RaciAssignments directory={directory} value={assignees} onChange={setAssignees} disabled={!canUpdate} />
               </div>
               {canUpdate ? (
                 <Button onClick={() => void save()} disabled={saving || !title.trim()}>

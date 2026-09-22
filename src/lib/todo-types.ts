@@ -10,9 +10,11 @@ export type ProjectStatus = TodoProject["status"];
 export type TaskStatus = TodoTask["status"];
 export type TaskPriority = TodoTask["priority"];
 export type Assignee = TodoTask["assignees"][number];
+export type RaciRole = NonNullable<Assignee["role"]>;
 export type DirectoryPerson = {
   clerkId: string;
   name: string;
+  email?: string;
   imageUrl: string | null;
 };
 

@@ -115,7 +115,7 @@ export function ProjectBoard({
                   </CollapsibleTrigger>
                   <CollapsibleContent>
                     <div className="hidden grid-cols-[38px_minmax(240px,1fr)_150px_115px_105px_70px] border-b px-3 py-2 text-[11px] font-medium text-muted-foreground lg:grid">
-                      <span /><span>Nom de la tâche</span><span>Copains</span><span>Échéance</span><span>Priorité</span><span />
+                      <span /><span>Nom de la tâche</span><span>Participants</span><span>Échéance</span><span>Priorité</span><span />
                     </div>
                     {sectionTasks.map((task) => {
                       const overdue = Boolean(task.dueAt && task.status !== "done" && isBefore(task.dueAt, startOfDay(new Date())));

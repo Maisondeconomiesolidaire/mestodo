@@ -232,7 +232,7 @@ function Workspace() {
           <>
             <ProjectHeader project={project} tab={projectTab} onTabChange={setProjectTab} canUpdate={canUpdate} canDelete={canDelete} onEdit={() => { setEditingProject(project); setProjectDialogOpen(true); }} onStatusChange={(status) => void changeProjectStatus(status)} onDelete={() => setDeleteProjectOpen(true)} />
             <main className="p-4 md:p-6 xl:p-8">
-              {directoryError ? <p className="mb-4 text-xs text-muted-foreground">L’annuaire des copains est temporairement indisponible.</p> : null}
+              {directoryError ? <p className="mb-4 text-xs text-muted-foreground">L’annuaire des participants est temporairement indisponible.</p> : null}
               {projectTab === "overview" ? <ProjectOverview project={project} tasks={data.tasks} /> : projectTab === "notes" ? <ProjectNotes projectId={project._id} notes={data.notes} canCreate={canCreate} canDelete={canDelete} /> : <ProjectBoard view={projectTab} tasks={data.tasks} notes={data.notes} canCreate={canCreate} canUpdate={canUpdate} onCreateTask={() => setTaskDialogOpen(true)} onOpenTask={setSelectedTaskId} onToggleTask={(task) => void changeTaskStatus(task, task.status === "done" ? "todo" : "done")} onChangeTaskStatus={(task, status) => void changeTaskStatus(task, status)} />}
             </main>
             <TaskSheet open={Boolean(selectedTask)} onOpenChange={(open) => { if (!open) setSelectedTaskId(null); }} projectId={project._id} task={selectedTask} tasks={data.tasks} notes={data.notes} directory={directory} canUpdate={canUpdate} canCreate={canCreate} canDelete={canDelete} onOpenTask={setSelectedTaskId} onToggleTask={(task) => void changeTaskStatus(task, task.status === "done" ? "todo" : "done")} />

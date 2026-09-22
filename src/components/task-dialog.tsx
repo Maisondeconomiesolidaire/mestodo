@@ -2,7 +2,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { useMutation } from "convex/react";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { api } from "../../convex/_generated/api";
-import { AssigneePicker } from "@/components/assignee-picker";
+import { RaciAssignments } from "@/components/assignee-picker";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -138,8 +138,8 @@ export function TaskDialog({
             </div>
           </div>
           <div className="grid gap-2">
-            <Label>Copains</Label>
-            <AssigneePicker directory={directory} value={assignees} onChange={setAssignees} />
+            <Label>Participants et rôles</Label>
+            <RaciAssignments directory={directory} value={assignees} onChange={setAssignees} />
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>Annuler</Button>

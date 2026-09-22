@@ -88,7 +88,7 @@ export function HomeView({
 }) {
   const projectById = new Map(projects.map((project) => [project._id, project]));
   const myTasks = tasks
-    .filter((task) => task.status !== "done" && task.assignees.some((person) => person.clerkId === currentClerkId))
+    .filter((task) => task.status !== "done" && task.assignees.some((person) => person.clerkId === currentClerkId && (person.role ?? "responsible") === "responsible"))
     .sort((a, b) => (a.dueAt ?? Number.MAX_SAFE_INTEGER) - (b.dueAt ?? Number.MAX_SAFE_INTEGER))
     .slice(0, 6);
   const activeProjects = projects.filter((project) => project.status === "active");
@@ -147,7 +147,7 @@ export function MyTasksView({
   const [view, setView] = useState<"list" | "board">("board");
   const [search, setSearch] = useState("");
   const projectById = useMemo(() => new Map(projects.map((project) => [project._id, project])), [projects]);
-  const mine = useMemo(() => tasks.filter((task) => task.assignees.some((person) => person.clerkId === currentClerkId)), [currentClerkId, tasks]);
+  const mine = useMemo(() => tasks.filter((task) => task.assignees.some((person) => person.clerkId === currentClerkId && (person.role ?? "responsible") === "responsible")), [currentClerkId, tasks]);
   const filtered = useMemo(() => {
     const term = search.trim().toLocaleLowerCase("fr-FR");
     if (!term) return mine;
