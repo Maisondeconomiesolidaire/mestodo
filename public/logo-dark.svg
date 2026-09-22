@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 48" role="img" aria-labelledby="title">
+  <title id="title">Mes Todo</title>
+  <rect width="48" height="48" rx="14" fill="#818cf8"/>
+  <path d="M14 24.5l6.2 6.2L34.5 16.5" fill="none" stroke="#18181b" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="60" y="32" fill="#fafafa" font-family="Inter,Arial,sans-serif" font-size="24" font-weight="750">Mes Todo</text>
+</svg>
