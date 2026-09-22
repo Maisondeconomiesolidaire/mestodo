@@ -9,6 +9,7 @@ import {
   CircleDashed,
   ClipboardCheck,
   FolderKanban,
+  ListTodo,
   Home,
   LayoutList,
   Loader2,
@@ -204,7 +205,8 @@ function Workspace() {
     onProjects: () => { setLocation("projects"); setSelectedTaskId(null); },
     onSelect: openProject,
     canCreate,
-    onCreate: createProject,
+    onCreateProject: createProject,
+    onCreateTask: () => setTaskDialogOpen(true),
   };
 
   return (
@@ -214,14 +216,14 @@ function Workspace() {
         <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b bg-background/90 px-4 backdrop-blur-xl md:px-6">
           <Sheet><SheetTrigger asChild><Button variant="ghost" size="icon" className="lg:hidden" aria-label="Ouvrir la navigation"><Menu className="h-5 w-5" /></Button></SheetTrigger><SheetContent side="left" className="w-72 p-0"><ProjectSidebar {...sidebarProps} /></SheetContent></Sheet>
           <div className="min-w-0 flex-1"><span className="truncate text-sm font-semibold">{location === "home" ? "Accueil" : location === "my_tasks" ? "Mes tâches" : location === "projects" ? "Projets" : project?.title ?? "Projet"}</span></div>
-          {canCreate ? <Button size="sm" onClick={project && location === "project" ? () => setTaskDialogOpen(true) : createProject}><Plus className="mr-1.5 h-4 w-4" />Créer</Button> : null}
+          {canCreate ? <CreateMenu onCreateTask={() => setTaskDialogOpen(true)} onCreateProject={createProject} compact /> : null}
         </header>
 
         {error ? <div className="px-4 pt-4 md:px-7"><Alert variant="destructive"><AlertTitle>Action impossible</AlertTitle><AlertDescription>{error}</AlertDescription></Alert></div> : null}
         {workspace === undefined || (effectiveProjectId && data === undefined) ? <main className="p-5 md:p-7"><ProjectSkeleton /></main> : location === "home" ? (
-          <main className="p-5 md:p-7 xl:p-9"><HomeView projects={projects} tasks={allTasks} currentClerkId={workspace.currentClerkId} canCreate={canCreate} canUpdate={canUpdate} onCreateProject={createProject} onOpenProject={openProject} onOpenTask={openWorkspaceTask} onToggleTask={(task) => void changeTaskStatus(task, task.status === "done" ? "todo" : "done")} /></main>
+          <main className="p-5 md:p-7 xl:p-9"><HomeView projects={projects} tasks={allTasks} currentClerkId={workspace.currentClerkId} canCreate={canCreate} canUpdate={canUpdate} onCreateTask={() => setTaskDialogOpen(true)} onCreateProject={createProject} onOpenProject={openProject} onOpenTask={openWorkspaceTask} onToggleTask={(task) => void changeTaskStatus(task, task.status === "done" ? "todo" : "done")} /></main>
         ) : location === "my_tasks" ? (
-          <main className="p-5 md:p-7 xl:p-9"><MyTasksView projects={projects} tasks={allTasks} currentClerkId={workspace.currentClerkId} canUpdate={canUpdate} onOpenTask={openWorkspaceTask} onToggleTask={(task) => void changeTaskStatus(task, task.status === "done" ? "todo" : "done")} /></main>
+          <main className="p-5 md:p-7 xl:p-9"><MyTasksView projects={projects} tasks={allTasks} currentClerkId={workspace.currentClerkId} canCreate={canCreate} canUpdate={canUpdate} onCreateTask={() => setTaskDialogOpen(true)} onOpenTask={openWorkspaceTask} onToggleTask={(task) => void changeTaskStatus(task, task.status === "done" ? "todo" : "done")} onChangeTaskStatus={(task, status) => void changeTaskStatus(task, status)} /></main>
         ) : location === "projects" ? (
           <main className="p-5 md:p-7 xl:p-9"><ProjectsView projects={projects} canCreate={canCreate} onCreate={createProject} onOpen={openProject} /></main>
         ) : !project || !data ? (
@@ -233,12 +235,12 @@ function Workspace() {
               {directoryError ? <p className="mb-4 text-xs text-muted-foreground">L’annuaire des copains est temporairement indisponible.</p> : null}
               {projectTab === "overview" ? <ProjectOverview project={project} tasks={data.tasks} /> : projectTab === "notes" ? <ProjectNotes projectId={project._id} notes={data.notes} canCreate={canCreate} canDelete={canDelete} /> : <ProjectBoard view={projectTab} tasks={data.tasks} notes={data.notes} canCreate={canCreate} canUpdate={canUpdate} onCreateTask={() => setTaskDialogOpen(true)} onOpenTask={setSelectedTaskId} onToggleTask={(task) => void changeTaskStatus(task, task.status === "done" ? "todo" : "done")} onChangeTaskStatus={(task, status) => void changeTaskStatus(task, status)} />}
             </main>
-            <TaskDialog open={taskDialogOpen} onOpenChange={setTaskDialogOpen} projectId={project._id} directory={directory} />
             <TaskSheet open={Boolean(selectedTask)} onOpenChange={(open) => { if (!open) setSelectedTaskId(null); }} projectId={project._id} task={selectedTask} tasks={data.tasks} notes={data.notes} directory={directory} canUpdate={canUpdate} canCreate={canCreate} canDelete={canDelete} onOpenTask={setSelectedTaskId} onToggleTask={(task) => void changeTaskStatus(task, task.status === "done" ? "todo" : "done")} />
             <AlertDialog open={deleteProjectOpen} onOpenChange={setDeleteProjectOpen}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Supprimer « {project.title} » ?</AlertDialogTitle><AlertDialogDescription>Toutes les tâches, sous-tâches et notes seront supprimées.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Annuler</AlertDialogCancel><AlertDialogAction onClick={() => void destroyProject()} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Supprimer</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
           </>
         )}
       </div>
+      <TaskDialog open={taskDialogOpen} onOpenChange={setTaskDialogOpen} projectId={effectiveProjectId ?? undefined} projects={projects} directory={directory} />
       <ProjectDialog open={projectDialogOpen} onOpenChange={setProjectDialogOpen} project={editingProject} onSaved={(id) => { if (id) openProject(id); setEditingProject(undefined); }} />
     </div>
   );
@@ -259,7 +261,7 @@ function ProjectHeader({ project, tab, onTabChange, canUpdate, canDelete, onEdit
   );
 }
 
-function ProjectSidebar({ projects, selectedId, location, filter, onFilterChange, onHome, onMyTasks, onProjects, onSelect, canCreate, onCreate }: { projects: TodoProject[]; selectedId: ProjectId | null; location: Location; filter: ProjectFilter; onFilterChange: (filter: ProjectFilter) => void; onHome: () => void; onMyTasks: () => void; onProjects: () => void; onSelect: (id: ProjectId) => void; canCreate: boolean; onCreate: () => void }) {
+function ProjectSidebar({ projects, selectedId, location, filter, onFilterChange, onHome, onMyTasks, onProjects, onSelect, canCreate, onCreateProject, onCreateTask }: { projects: TodoProject[]; selectedId: ProjectId | null; location: Location; filter: ProjectFilter; onFilterChange: (filter: ProjectFilter) => void; onHome: () => void; onMyTasks: () => void; onProjects: () => void; onSelect: (id: ProjectId) => void; canCreate: boolean; onCreateProject: () => void; onCreateTask: () => void }) {
   const { user } = useUser();
   const { signOut } = useClerk();
   const userName = user?.firstName ?? user?.fullName ?? user?.primaryEmailAddress?.emailAddress ?? "Mon compte";
@@ -267,7 +269,7 @@ function ProjectSidebar({ projects, selectedId, location, filter, onFilterChange
     <div className="flex h-full flex-col bg-card">
       <div className="flex h-20 items-center border-b px-5"><button type="button" onClick={onHome} className="text-xl font-black tracking-[-0.04em] text-foreground">Mes<span className="text-primary">Todo</span></button></div>
       <div className="space-y-1 p-3">
-        {canCreate ? <Button className="mb-3 h-11 w-full justify-start rounded-xl shadow-sm" onClick={onCreate}><Plus className="mr-2 h-4 w-4" />Créer</Button> : null}
+        {canCreate ? <CreateMenu onCreateTask={onCreateTask} onCreateProject={onCreateProject} /> : null}
         <SidebarLink active={location === "home"} icon={Home} label="Accueil" onClick={onHome} />
         <SidebarLink active={location === "my_tasks"} icon={CheckCircle2} label="Mes tâches" onClick={onMyTasks} />
         <SidebarLink active={location === "projects"} icon={FolderKanban} label="Projets" onClick={onProjects} />
@@ -276,7 +278,6 @@ function ProjectSidebar({ projects, selectedId, location, filter, onFilterChange
       <div className="flex items-center justify-between px-4 pb-2 pt-4"><button type="button" onClick={onProjects} className="text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground">Favoris</button><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Filtrer les projets"><ChevronDown className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="start" className="w-52"><DropdownMenuItem onSelect={() => onFilterChange("all")}>Tous les projets</DropdownMenuItem>{(["active", "completed", "archived"] as ProjectStatus[]).map((status) => <DropdownMenuItem key={status} onSelect={() => onFilterChange(status)}>{PROJECT_STATUS_LABELS[status]}</DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu></div>
       <ScrollArea className="min-h-0 flex-1"><div className="grid gap-0.5 px-2 pb-3">{projects.length ? projects.map((project) => <button key={project._id} type="button" onClick={() => onSelect(project._id)} className={cn("flex items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm transition hover:bg-muted", location === "project" && selectedId === project._id && "bg-muted font-medium text-foreground")}><span className="h-2.5 w-2.5 shrink-0 rounded" style={{ backgroundColor: project.color ?? "#6366f1" }} /><span className="min-w-0 flex-1 truncate">{project.title}</span><span className="text-[10px] tabular-nums text-muted-foreground">{project.completedTaskCount}/{project.taskCount}</span></button>) : <p className="px-3 py-5 text-xs text-muted-foreground">Aucun projet {filter !== "all" ? PROJECT_STATUS_LABELS[filter].toLowerCase() : ""}</p>}</div></ScrollArea>
       <div className="space-y-2 border-t p-3">
-        <a href="https://mesoutils.groupemes.fr" className="block rounded-xl px-3 py-2 text-center text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground">Retour à Mes Outils</a>
         <ThemeToggle expanded />
         <div className="flex min-w-0 items-center gap-3 rounded-xl bg-muted px-3 py-2">
           <Avatar className="h-9 w-9"><AvatarImage src={user?.imageUrl} alt="" /><AvatarFallback>{userName.slice(0, 2).toUpperCase()}</AvatarFallback></Avatar>
@@ -285,6 +286,22 @@ function ProjectSidebar({ projects, selectedId, location, filter, onFilterChange
         <Button type="button" variant="ghost" className="h-10 w-full text-muted-foreground" onClick={() => void signOut({ redirectUrl: "/connexion" })}><LogOut className="mr-2 h-4 w-4" />Déconnexion</Button>
       </div>
     </div>
+  );
+}
+
+function CreateMenu({ onCreateTask, onCreateProject, compact = false }: { onCreateTask: () => void; onCreateProject: () => void; compact?: boolean }) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button size={compact ? "sm" : "default"} className={compact ? undefined : "mb-3 h-11 w-full justify-start rounded-xl shadow-sm"}><Plus className="mr-2 h-4 w-4" />Créer<ChevronDown className="ml-auto h-4 w-4 opacity-70" /></Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align={compact ? "end" : "start"} className="w-56">
+        <DropdownMenuLabel>Créer dans MesTodo</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={onCreateTask}><ListTodo className="mr-2 h-4 w-4" /><span><span className="block font-medium">Nouvelle tâche</span><span className="block text-xs text-muted-foreground">À ranger dans un projet</span></span></DropdownMenuItem>
+        <DropdownMenuItem onSelect={onCreateProject}><FolderKanban className="mr-2 h-4 w-4" /><span><span className="block font-medium">Nouveau projet</span><span className="block text-xs text-muted-foreground">Organiser un nouvel objectif</span></span></DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
