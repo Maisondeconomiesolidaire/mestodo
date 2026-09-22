@@ -78,8 +78,11 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-family: "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif;
+    background-image: radial-gradient(circle at 75% -10%, hsl(var(--primary) / 0.07), transparent 30rem);
+    background-attachment: fixed;
   }
   html, body, #root { min-height: 100%; }
+  ::selection { background: hsl(var(--primary) / 0.2); }
 }
 
 /* >>> AUTH-PORTAL >>> */

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { UserButton } from "@clerk/clerk-react";
+import { useClerk, useUser } from "@clerk/clerk-react";
 import { AuthLoading, Authenticated, Unauthenticated, useAction, useMutation, useQuery } from "convex/react";
 import { useTheme } from "next-themes";
 import {
@@ -12,6 +12,7 @@ import {
   Home,
   LayoutList,
   Loader2,
+  LogOut,
   Menu,
   Moon,
   MoreHorizontal,
@@ -28,6 +29,7 @@ import { AuthServiceFallback, AuthSwitch } from "@/components/ui/auth-switch";
 import { ProjectBoard } from "@/components/project-board";
 import { ProjectDialog } from "@/components/project-dialog";
 import { ProjectNotes } from "@/components/project-notes";
+import { ProjectsView } from "@/components/projects-view";
 import { TaskDialog } from "@/components/task-dialog";
 import { TaskSheet } from "@/components/task-sheet";
 import { HomeView, MyTasksView, ProjectOverview } from "@/components/workspace-views";
@@ -45,6 +47,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -71,7 +74,7 @@ import {
 } from "@/lib/todo-types";
 
 type ProjectFilter = "all" | ProjectStatus;
-type Location = "home" | "my_tasks" | "project";
+type Location = "home" | "my_tasks" | "projects" | "project";
 type ProjectTab = "overview" | "list" | "board" | "notes";
 
 export default function App() {
@@ -82,10 +85,10 @@ export default function App() {
       <AuthLoading><div className="flex min-h-screen items-center justify-center bg-background"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div></AuthLoading>
       <Unauthenticated>
         <AuthSwitch
-          appName="Mes Todo"
-          logoSrc="/logo.svg"
+          appName="MesTodo"
+          logoSrc="/mestodo-wordmark.svg"
           initialMode={signup ? "signup" : "signin"}
-          welcomeTitle="Bienvenue sur Mes Todo"
+          welcomeTitle="Bienvenue sur MesTodo"
           signinSubtitle="Connectez-vous pour accéder aux projets et aux tâches."
           memberPanelDescription="Retrouvez les projets, les tâches et les notes de l'équipe."
         />
@@ -198,6 +201,7 @@ function Workspace() {
     onFilterChange: setFilter,
     onHome: () => { setLocation("home"); setSelectedTaskId(null); },
     onMyTasks: () => { setLocation("my_tasks"); setSelectedTaskId(null); },
+    onProjects: () => { setLocation("projects"); setSelectedTaskId(null); },
     onSelect: openProject,
     canCreate,
     onCreate: createProject,
@@ -205,14 +209,12 @@ function Workspace() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 border-r bg-sidebar lg:block"><ProjectSidebar {...sidebarProps} /></aside>
-      <div className="lg:pl-60">
-        <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b bg-background/95 px-4 backdrop-blur md:px-6">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r bg-card lg:block"><ProjectSidebar {...sidebarProps} /></aside>
+      <div className="lg:pl-64">
+        <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b bg-background/90 px-4 backdrop-blur-xl md:px-6">
           <Sheet><SheetTrigger asChild><Button variant="ghost" size="icon" className="lg:hidden" aria-label="Ouvrir la navigation"><Menu className="h-5 w-5" /></Button></SheetTrigger><SheetContent side="left" className="w-72 p-0"><ProjectSidebar {...sidebarProps} /></SheetContent></Sheet>
-          <div className="min-w-0 flex-1"><span className="truncate text-sm font-medium">{location === "home" ? "Accueil" : location === "my_tasks" ? "Mes tâches" : project?.title ?? "Projet"}</span></div>
+          <div className="min-w-0 flex-1"><span className="truncate text-sm font-semibold">{location === "home" ? "Accueil" : location === "my_tasks" ? "Mes tâches" : location === "projects" ? "Projets" : project?.title ?? "Projet"}</span></div>
           {canCreate ? <Button size="sm" onClick={project && location === "project" ? () => setTaskDialogOpen(true) : createProject}><Plus className="mr-1.5 h-4 w-4" />Créer</Button> : null}
-          <ThemeToggle />
-          <UserButton afterSignOutUrl="/connexion" />
         </header>
 
         {error ? <div className="px-4 pt-4 md:px-7"><Alert variant="destructive"><AlertTitle>Action impossible</AlertTitle><AlertDescription>{error}</AlertDescription></Alert></div> : null}
@@ -220,13 +222,15 @@ function Workspace() {
           <main className="p-5 md:p-7 xl:p-9"><HomeView projects={projects} tasks={allTasks} currentClerkId={workspace.currentClerkId} canCreate={canCreate} canUpdate={canUpdate} onCreateProject={createProject} onOpenProject={openProject} onOpenTask={openWorkspaceTask} onToggleTask={(task) => void changeTaskStatus(task, task.status === "done" ? "todo" : "done")} /></main>
         ) : location === "my_tasks" ? (
           <main className="p-5 md:p-7 xl:p-9"><MyTasksView projects={projects} tasks={allTasks} currentClerkId={workspace.currentClerkId} canUpdate={canUpdate} onOpenTask={openWorkspaceTask} onToggleTask={(task) => void changeTaskStatus(task, task.status === "done" ? "todo" : "done")} /></main>
+        ) : location === "projects" ? (
+          <main className="p-5 md:p-7 xl:p-9"><ProjectsView projects={projects} canCreate={canCreate} onCreate={createProject} onOpen={openProject} /></main>
         ) : !project || !data ? (
           <main className="p-5 md:p-7"><EmptyWorkspace canCreate={canCreate} onCreate={createProject} /></main>
         ) : (
           <>
             <ProjectHeader project={project} tab={projectTab} onTabChange={setProjectTab} canUpdate={canUpdate} canDelete={canDelete} onEdit={() => { setEditingProject(project); setProjectDialogOpen(true); }} onStatusChange={(status) => void changeProjectStatus(status)} onDelete={() => setDeleteProjectOpen(true)} />
             <main className="p-4 md:p-6 xl:p-8">
-              {directoryError ? <p className="mb-4 text-xs text-muted-foreground">L’annuaire des responsables est temporairement indisponible.</p> : null}
+              {directoryError ? <p className="mb-4 text-xs text-muted-foreground">L’annuaire des copains est temporairement indisponible.</p> : null}
               {projectTab === "overview" ? <ProjectOverview project={project} tasks={data.tasks} /> : projectTab === "notes" ? <ProjectNotes projectId={project._id} notes={data.notes} canCreate={canCreate} canDelete={canDelete} /> : <ProjectBoard view={projectTab} tasks={data.tasks} notes={data.notes} canCreate={canCreate} canUpdate={canUpdate} onCreateTask={() => setTaskDialogOpen(true)} onOpenTask={setSelectedTaskId} onToggleTask={(task) => void changeTaskStatus(task, task.status === "done" ? "todo" : "done")} onChangeTaskStatus={(task, status) => void changeTaskStatus(task, status)} />}
             </main>
             <TaskDialog open={taskDialogOpen} onOpenChange={setTaskDialogOpen} projectId={project._id} directory={directory} />
@@ -255,31 +259,43 @@ function ProjectHeader({ project, tab, onTabChange, canUpdate, canDelete, onEdit
   );
 }
 
-function ProjectSidebar({ projects, selectedId, location, filter, onFilterChange, onHome, onMyTasks, onSelect, canCreate, onCreate }: { projects: TodoProject[]; selectedId: ProjectId | null; location: Location; filter: ProjectFilter; onFilterChange: (filter: ProjectFilter) => void; onHome: () => void; onMyTasks: () => void; onSelect: (id: ProjectId) => void; canCreate: boolean; onCreate: () => void }) {
+function ProjectSidebar({ projects, selectedId, location, filter, onFilterChange, onHome, onMyTasks, onProjects, onSelect, canCreate, onCreate }: { projects: TodoProject[]; selectedId: ProjectId | null; location: Location; filter: ProjectFilter; onFilterChange: (filter: ProjectFilter) => void; onHome: () => void; onMyTasks: () => void; onProjects: () => void; onSelect: (id: ProjectId) => void; canCreate: boolean; onCreate: () => void }) {
+  const { user } = useUser();
+  const { signOut } = useClerk();
+  const userName = user?.firstName ?? user?.fullName ?? user?.primaryEmailAddress?.emailAddress ?? "Mon compte";
   return (
     <div className="flex h-full flex-col bg-card">
-      <div className="flex h-14 items-center border-b px-4"><img src="/logo.svg" alt="Mes Todo" className="h-8 w-auto dark:hidden" /><img src="/logo-dark.svg" alt="Mes Todo" className="hidden h-8 w-auto dark:block" /></div>
+      <div className="flex h-20 items-center border-b px-5"><button type="button" onClick={onHome} className="text-xl font-black tracking-[-0.04em] text-foreground">Mes<span className="text-primary">Todo</span></button></div>
       <div className="space-y-1 p-3">
-        {canCreate ? <Button className="mb-3 w-full justify-start" onClick={onCreate}><Plus className="mr-2 h-4 w-4" />Créer</Button> : null}
+        {canCreate ? <Button className="mb-3 h-11 w-full justify-start rounded-xl shadow-sm" onClick={onCreate}><Plus className="mr-2 h-4 w-4" />Créer</Button> : null}
         <SidebarLink active={location === "home"} icon={Home} label="Accueil" onClick={onHome} />
         <SidebarLink active={location === "my_tasks"} icon={CheckCircle2} label="Mes tâches" onClick={onMyTasks} />
+        <SidebarLink active={location === "projects"} icon={FolderKanban} label="Projets" onClick={onProjects} />
       </div>
       <Separator />
-      <div className="flex items-center justify-between px-4 pb-2 pt-4"><span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Projets</span><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Filtrer les projets"><ChevronDown className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="start" className="w-52"><DropdownMenuItem onSelect={() => onFilterChange("all")}>Tous les projets</DropdownMenuItem>{(["active", "completed", "archived"] as ProjectStatus[]).map((status) => <DropdownMenuItem key={status} onSelect={() => onFilterChange(status)}>{PROJECT_STATUS_LABELS[status]}</DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu></div>
+      <div className="flex items-center justify-between px-4 pb-2 pt-4"><button type="button" onClick={onProjects} className="text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground">Favoris</button><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Filtrer les projets"><ChevronDown className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="start" className="w-52"><DropdownMenuItem onSelect={() => onFilterChange("all")}>Tous les projets</DropdownMenuItem>{(["active", "completed", "archived"] as ProjectStatus[]).map((status) => <DropdownMenuItem key={status} onSelect={() => onFilterChange(status)}>{PROJECT_STATUS_LABELS[status]}</DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu></div>
       <ScrollArea className="min-h-0 flex-1"><div className="grid gap-0.5 px-2 pb-3">{projects.length ? projects.map((project) => <button key={project._id} type="button" onClick={() => onSelect(project._id)} className={cn("flex items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm transition hover:bg-muted", location === "project" && selectedId === project._id && "bg-muted font-medium text-foreground")}><span className="h-2.5 w-2.5 shrink-0 rounded" style={{ backgroundColor: project.color ?? "#6366f1" }} /><span className="min-w-0 flex-1 truncate">{project.title}</span><span className="text-[10px] tabular-nums text-muted-foreground">{project.completedTaskCount}/{project.taskCount}</span></button>) : <p className="px-3 py-5 text-xs text-muted-foreground">Aucun projet {filter !== "all" ? PROJECT_STATUS_LABELS[filter].toLowerCase() : ""}</p>}</div></ScrollArea>
-      <div className="border-t p-3"><a href="https://mesoutils.groupemes.fr" className="block rounded-md px-2.5 py-2 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground">Retour à Mes Outils</a></div>
+      <div className="space-y-2 border-t p-3">
+        <a href="https://mesoutils.groupemes.fr" className="block rounded-xl px-3 py-2 text-center text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground">Retour à Mes Outils</a>
+        <ThemeToggle expanded />
+        <div className="flex min-w-0 items-center gap-3 rounded-xl bg-muted px-3 py-2">
+          <Avatar className="h-9 w-9"><AvatarImage src={user?.imageUrl} alt="" /><AvatarFallback>{userName.slice(0, 2).toUpperCase()}</AvatarFallback></Avatar>
+          <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{userName}</p><p className="truncate text-[11px] text-muted-foreground">{user?.primaryEmailAddress?.emailAddress}</p></div>
+        </div>
+        <Button type="button" variant="ghost" className="h-10 w-full text-muted-foreground" onClick={() => void signOut({ redirectUrl: "/connexion" })}><LogOut className="mr-2 h-4 w-4" />Déconnexion</Button>
+      </div>
     </div>
   );
 }
 
 function SidebarLink({ active, icon: Icon, label, onClick }: { active: boolean; icon: typeof Home; label: string; onClick: () => void }) {
-  return <button type="button" onClick={onClick} className={cn("flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground", active && "bg-muted font-medium text-foreground")}><Icon className="h-4 w-4" />{label}</button>;
+  return <button type="button" onClick={onClick} className={cn("flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground", active && "bg-primary text-primary-foreground shadow-[0_8px_18px_hsl(var(--primary)/0.22)] hover:bg-primary hover:text-primary-foreground")}><Icon className="h-[18px] w-[18px]" />{label}</button>;
 }
 
-function ThemeToggle() {
+function ThemeToggle({ expanded = false }: { expanded?: boolean }) {
   const { resolvedTheme, setTheme } = useTheme();
   const dark = resolvedTheme === "dark";
-  return <Button variant="ghost" size="icon" onClick={() => setTheme(dark ? "light" : "dark")} aria-label={dark ? "Activer le thème clair" : "Activer le thème sombre"}>{dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}</Button>;
+  return <Button variant="ghost" size={expanded ? "default" : "icon"} className={expanded ? "h-10 w-full text-muted-foreground" : undefined} onClick={() => setTheme(dark ? "light" : "dark")} aria-label={dark ? "Activer le thème clair" : "Activer le thème sombre"}>{dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}{expanded ? <span className="ml-2">{dark ? "Mode clair" : "Mode sombre"}</span> : null}</Button>;
 }
 
 function EmptyWorkspace({ canCreate, onCreate }: { canCreate: boolean; onCreate: () => void }) {

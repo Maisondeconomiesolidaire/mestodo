@@ -26,6 +26,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   errorMessage,
   type Assignee,
@@ -36,12 +37,6 @@ import {
   type TodoNote,
   type TodoTask,
 } from "@/lib/todo-types";
-
-function inputDate(value?: number) {
-  if (!value) return "";
-  const date = new Date(value);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-}
 
 export function TaskSheet({
   open,
@@ -80,7 +75,7 @@ export function TaskSheet({
   const [status, setStatus] = useState<TaskStatus>("todo");
   const [priority, setPriority] = useState<TaskPriority>("medium");
   const [assignees, setAssignees] = useState<Assignee[]>([]);
-  const [dueAt, setDueAt] = useState("");
+  const [dueAt, setDueAt] = useState<number>();
   const [noteBody, setNoteBody] = useState("");
   const [subtaskTitle, setSubtaskTitle] = useState("");
   const [saving, setSaving] = useState(false);
@@ -93,7 +88,7 @@ export function TaskSheet({
     setStatus(task.status);
     setPriority(task.priority);
     setAssignees(task.assignees);
-    setDueAt(inputDate(task.dueAt));
+    setDueAt(task.dueAt);
     setSubtaskTitle("");
     setError(null);
   }, [task]);
@@ -115,7 +110,7 @@ export function TaskSheet({
         status,
         priority,
         assignees,
-        dueAt: dueAt ? new Date(`${dueAt}T18:00:00`).getTime() : null,
+        dueAt: dueAt ?? null,
       });
     } catch (caught) {
       setError(errorMessage(caught, "Enregistrement impossible."));
@@ -181,7 +176,7 @@ export function TaskSheet({
               {parent ? <button type="button" onClick={() => onOpenTask(parent._id)} className="mb-2 inline-flex w-fit items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"><ChevronLeft className="h-3.5 w-3.5" />{parent.title}</button> : null}
               <div className="flex items-center gap-3">
                 <Button type="button" variant={task.status === "done" ? "default" : "outline"} size="icon" className="h-9 w-9 shrink-0 rounded-full" disabled={!canUpdate} onClick={() => onToggleTask(task)} aria-label={task.status === "done" ? "Rouvrir la tâche" : "Terminer la tâche"}>{task.status === "done" ? <CheckCircle2 className="h-5 w-5" /> : <Circle className="h-5 w-5" />}</Button>
-                <div><SheetTitle>{task.status === "done" ? "Tâche terminée" : "Détail de la tâche"}</SheetTitle><SheetDescription>Projet, responsables et activité</SheetDescription></div>
+                <div><SheetTitle>{task.status === "done" ? "Tâche terminée" : "Détail de la tâche"}</SheetTitle><SheetDescription>Projet, copains et activité</SheetDescription></div>
               </div>
             </SheetHeader>
             <div className="mt-6 grid gap-5">
@@ -221,10 +216,10 @@ export function TaskSheet({
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="sheet-task-date">Échéance</Label>
-                <Input id="sheet-task-date" type="date" value={dueAt} onChange={(event) => setDueAt(event.target.value)} disabled={!canUpdate} />
+                <DatePicker id="sheet-task-date" value={dueAt} onChange={setDueAt} disabled={!canUpdate} />
               </div>
               <div className="grid gap-2">
-                <Label>Responsables</Label>
+                <Label>Copains</Label>
                 <AssigneePicker directory={directory} value={assignees} onChange={setAssignees} disabled={!canUpdate} />
               </div>
               {canUpdate ? (

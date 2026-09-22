@@ -51,17 +51,17 @@ export function AssigneePicker({
             <UserRoundPlus className="h-4 w-4 shrink-0 text-muted-foreground" />
             <span className="truncate">
               {value.length === 0
-                ? "Aucun responsable"
+                ? "Aucun copain"
                 : value.length === 1
                   ? value[0].name
-                  : `${value.length} responsables`}
+                  : `${value.length} copains`}
             </span>
           </span>
           <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-72">
-        <DropdownMenuLabel>Responsables</DropdownMenuLabel>
+        <DropdownMenuLabel>Copains</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {directory.length === 0 ? (
           <p className="px-2 py-3 text-sm text-muted-foreground">Annuaire indisponible</p>

@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { DatePicker } from "@/components/ui/date-picker";
 import { errorMessage, type Assignee, type DirectoryPerson, type ProjectId, type TaskPriority } from "@/lib/todo-types";
 
 export function TaskDialog({
@@ -35,7 +36,7 @@ export function TaskDialog({
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<TaskPriority>("medium");
   const [assignees, setAssignees] = useState<Assignee[]>([]);
-  const [dueAt, setDueAt] = useState("");
+  const [dueAt, setDueAt] = useState<number>();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,7 +45,7 @@ export function TaskDialog({
     setDescription("");
     setPriority("medium");
     setAssignees([]);
-    setDueAt("");
+    setDueAt(undefined);
     setError(null);
   }
 
@@ -64,7 +65,7 @@ export function TaskDialog({
         description: description || undefined,
         priority,
         assignees,
-        dueAt: dueAt ? new Date(`${dueAt}T18:00:00`).getTime() : undefined,
+        dueAt,
       });
       handleOpenChange(false);
     } catch (caught) {
@@ -111,11 +112,11 @@ export function TaskDialog({
             </div>
             <div className="grid gap-2">
               <Label htmlFor="task-date">Échéance</Label>
-              <Input id="task-date" type="date" value={dueAt} onChange={(event) => setDueAt(event.target.value)} />
+              <DatePicker id="task-date" value={dueAt} onChange={setDueAt} />
             </div>
           </div>
           <div className="grid gap-2">
-            <Label>Responsables</Label>
+            <Label>Copains</Label>
             <AssigneePicker directory={directory} value={assignees} onChange={setAssignees} />
           </div>
           <DialogFooter>

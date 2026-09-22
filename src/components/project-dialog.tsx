@@ -15,20 +15,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { DatePicker } from "@/components/ui/date-picker";
 import { cn } from "@/lib/utils";
 import { errorMessage, type ProjectId, type TodoProject } from "@/lib/todo-types";
 
 const COLORS = ["#4f46e5", "#0891b2", "#059669", "#d97706", "#e11d48", "#7c3aed"];
-
-function dateInput(timestamp?: number) {
-  if (!timestamp) return "";
-  const date = new Date(timestamp);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-}
-
-function timestamp(value: string) {
-  return value ? new Date(`${value}T18:00:00`).getTime() : undefined;
-}
 
 export function ProjectDialog({
   open,
@@ -45,7 +36,7 @@ export function ProjectDialog({
   const updateProject = useMutation(api.mestodo.updateProject);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [dueAt, setDueAt] = useState("");
+  const [dueAt, setDueAt] = useState<number>();
   const [color, setColor] = useState(COLORS[0]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,7 +45,7 @@ export function ProjectDialog({
     if (!open) return;
     setTitle(project?.title ?? "");
     setDescription(project?.description ?? "");
-    setDueAt(dateInput(project?.dueAt));
+    setDueAt(project?.dueAt);
     setColor(project?.color ?? COLORS[0]);
     setError(null);
   }, [open, project]);
@@ -69,7 +60,7 @@ export function ProjectDialog({
           projectId: project._id,
           title,
           description: description || null,
-          dueAt: timestamp(dueAt) ?? null,
+          dueAt: dueAt ?? null,
           color,
         });
         onSaved?.(project._id);
@@ -77,7 +68,7 @@ export function ProjectDialog({
         const id = await createProject({
           title,
           description: description || undefined,
-          dueAt: timestamp(dueAt),
+          dueAt,
           color,
         });
         onSaved?.(id);
@@ -115,7 +106,7 @@ export function ProjectDialog({
           <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
             <div className="grid gap-2">
               <Label htmlFor="project-date">Échéance</Label>
-              <Input id="project-date" type="date" value={dueAt} onChange={(event) => setDueAt(event.target.value)} />
+              <DatePicker id="project-date" value={dueAt} onChange={setDueAt} />
             </div>
             <div className="grid gap-2">
               <Label>Couleur</Label>
